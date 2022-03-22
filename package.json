@@ -1,0 +1,22 @@
+{
+  "name": "postgress",
+  "version": "1.0.0",
+  "description": "-",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "I Danilov",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "gulp": "^2.6.0",
+    "gulp-cli": "^2.3.0",
+    "pg": "^8.7.1",
+    "react-dom": "^17.0.2",
+    "read-excel-file": "^5.2.25",
+    "sequelize": "^6.11.0",
+    "sequelize-cli": "^6.3.0",
+    "xlsx": "^0.17.4"
+  }
+}
