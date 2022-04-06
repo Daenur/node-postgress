@@ -1,14 +1,14 @@
 const Pool = require('pg').Pool
-const poolmy = new Pool({
+const pool = new Pool({
   "user": "postgres",
-  "host": "localhost",
-  "database": "postgres",
-  "password": "123",
-  "port": 5432,
+  "host": "192.168.10.230",
+  "database": "NSI_test",
+  "password": "postgres",
+  "port": 5434,
   "dialect": "postgres"
 });
 
-const pool = new Pool({
+const poolmy = new Pool({
   "user": "postgres",
   "host": "172.16.1.13",
   "database": "NSI_test",
@@ -108,7 +108,7 @@ getsubProject = (project) => {
 getdist = (project) => {
   console.log(project+"  sist")
   return new Promise(function(resolve, reject) {
-    const sql='SELECT id_area,country,name_full,name_shot,code_devision,devis,shape FROM atd.info_area_devision \n' +
+    const sql='SELECT id_area,country,devis,name_full,name_shot,code_devision,date_start,date_end,shape FROM atd.info_area_devision \n' +
         'inner join (SELECT *  FROM atd.link_up_down where id_parent_area='+project+') as total USING(id_area)\n' +
         'inner join (SELECT name_full as country,id_country FROM atd.country ) as total2 USING(id_country)\n' +
         'inner join (SELECT name_devis as devis,id_type_devis FROM atd.type_devision ) as total3 USING(id_type_devis)\n' +
@@ -122,9 +122,27 @@ getdist = (project) => {
     })
   })
 }
+
+getAllstate = (project) => {
+  return new Promise(function(resolve, reject) {
+    const sql='SELECT id_area,country,devis,name_full,name_shot,code_devision,date_start,date_end,shape  FROM atd.info_area_devision  \n' +
+        'inner join (SELECT name_full as country,id_country FROM atd.country ) as total2 USING(id_country)\n' +
+        'inner join (SELECT name_devis as devis,id_type_devis FROM atd.type_devision ) as total3 USING(id_type_devis)\n' +
+        'inner join (SELECT name_status_shape as shape,id_status_shape FROM atd.status_shape ) as total4 \n' +
+        'USING(id_status_shape) where id_type_devis=1';
+    pool.query(sql,(error, results) => {
+		console.log(error)
+      if (error) {
+        reject(error)
+      }
+      resolve(results.rows);
+    })
+  })
+}
+
 getcountry = (schema,table) => {
   return new Promise(function(resolve, reject) {
-    const sql='SELECT id_area,id_country,id_type_devis,name_full,name_shot,code_devision,id_status_shape FROM atd.info_area_devision where id_type_devis=1';
+    const sql='SELECT id_area,name_full FROM atd.info_area_devision where id_type_devis=1';
     console.log(sql);
     pool.query(sql,(error, results) => {
       if (error) {
@@ -193,6 +211,7 @@ createSelhoz = (text,schema,table,id="0",tableid="0",schemaid="0") => {
   var sql="";
    if (tableid=="0")  sql=('INSERT INTO "'+schema+'"."'+table+'"  VALUES ('+text+')');
    else  sql=('INSERT INTO "'+schema+'"."'+table+'"  VALUES ('+text+')');
+   console.log(sql)
   return new Promise(function(resolve, reject) {
     pool.query(sql, (error, results) => {
       if (error) {
@@ -200,6 +219,21 @@ createSelhoz = (text,schema,table,id="0",tableid="0",schemaid="0") => {
         reject(error)
       }
       resolve(`A new selhoz has been added added: `)
+    })
+  })
+}
+
+createcustomSelhoz = (text,textcol,schema,table) => {
+  var sql="";
+  sql=('INSERT INTO "'+schema+'"."'+table+'" ('+textcol+') VALUES ('+text+')');
+   console.log(sql)
+  return new Promise(function(resolve, reject) {
+    pool.query(sql, (error, results) => {
+      if (error) {
+        console.log(error);
+        reject(error)
+      }
+      resolve(`A new has been added added: `)
     })
   })
 }
@@ -248,6 +282,18 @@ const getRubric = (schema) => {
    console.log("SELECT table_name FROM information_schema.tables WHERE table_schema='"+schema+"'");
   return new Promise(function(resolve, reject) {
     pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='"+schema+"'", (error, results) => {
+      if (error) {
+        reject(error)
+      }
+       resolve(results.rows);
+      });
+    })
+}
+
+const getAllChild = (id_p) => {
+   console.log("SELECT id_area FROM atd.link_up_down where id_parent_area="+id_p);
+  return new Promise(function(resolve, reject) {
+    pool.query("SELECT id_area,name_full FROM atd.info_area_devision inner join (SELECT *  FROM atd.link_up_down where id_parent_area="+id_p+") as total USING(id_area)", (error, results) => {
       if (error) {
         reject(error)
       }
@@ -383,5 +429,8 @@ module.exports = {
   getFKSeason,
   insertcrop,
   insertarea,
-  insertseason
+  insertseason,
+  getAllChild,
+  getAllstate,
+  createcustomSelhoz
 }
