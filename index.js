@@ -30,6 +30,19 @@ app.get('/', (req, res) => {
 
 })
 
+app.get('/filter/:col.:value.:schema.:table', (req, res) => {
+    
+    selhoz_model.filter(req.params.col.substr(1),req.params.value.substr(1),req.params.schema.substr(1),req.params.table.substr(1))
+        .then(response => {
+            console.log(response);
+            res.send(response);
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).send(error);
+        })
+})
+
 app.get('/schema/:schemaid', (req, res) => {
     console.log(req.params.schemaid.substr(1));
     selhoz_model.getRubric(req.params.schemaid.substr(1))
@@ -97,6 +110,24 @@ app.get('/subproject/:projectid', (req, res) => {
             console.log(error);
             res.status(500).send(error);
         })
+})
+
+app.post('/generatesub/:id.:dates.:datee.:datef.:crop.:atd.:sea', (req, res) => {
+	
+	console.log(req.params)
+	let count=0;
+	let cropA=req.params.crop.substr(1).split('&');
+	let atdA=req.params.atd.substr(1).split('&');
+	let seaA=req.params.sea.substr(1).split('&');
+	for (let i=0;i<cropA.length-1;i++)
+	{
+		for (let j=0;j<atdA.length-1;j++) {
+			for (let k=0;k<seaA.length-1;k++)
+			{count++;
+	let sql=req.params.id.substr(1)+",'Subproject "+req.params.id.substr(1)+"_"+count+"',"+req.params.dates.substr(1)+','+req.params.datee.substr(1)+','+req.params.datef.substr(1)+',1,'+cropA[i]+','+atdA[j]+','+seaA[k];
+	console.log(sql)
+    selhoz_model.generateSub(sql);
+	}}}
 })
 
 app.get('/dist/:projectid', (req, res) => {
@@ -368,6 +399,17 @@ console.log("insertcrop")
         })
 })
 
+app.post('/deletecrop/:project.:id', (req, res) => {
+console.log("insertcrop")
+    selhoz_model.deletecrop(req.params.project.substr(1),req.params.id.substr(1))
+        .then(response => {
+            res.status(200).send(response);
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
 app.post('/insertseason/:project.:id', (req, res) => {
     console.log("insertseason")
     selhoz_model.insertseason(req.params.project.substr(1),req.params.id.substr(1))
@@ -379,9 +421,31 @@ app.post('/insertseason/:project.:id', (req, res) => {
         })
 })
 
+app.post('/deletearea/:project.:id', (req, res) => {
+console.log("insertcrop")
+    selhoz_model.deletearea(req.params.project.substr(1),req.params.id.substr(1))
+        .then(response => {
+            res.status(200).send(response);
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
 app.post('/insertarea/:project.:id', (req, res) => {
     console.log("insertarea")
     selhoz_model.insertarea(req.params.project.substr(1),req.params.id.substr(1))
+        .then(response => {
+            res.status(200).send(response);
+        })
+        .catch(error => {
+            res.status(500).send(error);
+        })
+})
+
+app.post('/deleteseason/:project.:id', (req, res) => {
+console.log("insertcrop")
+    selhoz_model.deleteseason(req.params.project.substr(1),req.params.id.substr(1))
         .then(response => {
             res.status(200).send(response);
         })
