@@ -1,10 +1,10 @@
 const Pool = require('pg').Pool
 const pool = new Pool({
-  "user": "postgres",
-  "host": "192.168.10.230",
-  "database": "NSI_test",
-  "password": "postgres",
-  "port": 5434,
+  "user": "nsi",
+  "host": "45.89.26.151",
+  "database": "nsi",
+  "password": "endless",
+  "port": 5432,
   "dialect": "postgres"
 });
 
@@ -75,7 +75,7 @@ getProject = (project) => {
         'INNER JOIN (SELECT STRING_AGG(other.season.season_name || \'&&\' || "other".season.id_season,\',\') as Seasons, \n' +
         'project_season.id_project FROM "projects".project_season \n' +
         'INNER JOIN other.season ON project_season .id_season=other.season.id_season\t\t\n' +
-        'GROUP BY project_season.id_project) AS season USING (id_project) WHERE project.name_project='+"'"+project+"'";
+        'GROUP BY project_season.id_project) AS season USING (id_project) WHERE project.id_project='+"'"+project+"'";
     pool.query(sql,(error, results) => {
       if (error) {
         reject(error)
@@ -253,7 +253,41 @@ id=id.replace('"',"'");
   })
 }
 
+const deletecrop = (id,id_crop) => {
+  return new Promise(function(resolve, reject) {
+    pool.query('DELETE FROM projects.project_crop  WHERE id_project = '+id+' AND id_crop='+id_crop, (error, results) => {
+      if (error) {
+        reject(error)
+        console.log(error);
+      }
+      resolve('Merchant deleted with ID: '+id)
+    })
+  })
+}
 
+const deleteseason = (idname,id,schema,table) => {
+return new Promise(function(resolve, reject) {
+    pool.query('DELETE FROM projects.project_season  WHERE id_project = '+id+' AND id_season='+id_crop, (error, results) => {
+      if (error) {
+        reject(error)
+        console.log(error);
+      }
+      resolve('Merchant deleted with ID: '+id)
+    })
+  })
+}
+
+const deletearea = (idname,id,schema,table) => {
+return new Promise(function(resolve, reject) {
+    pool.query('DELETE FROM projects.project_devision  WHERE id_project = '+id+' AND id_area='+id_crop, (error, results) => {
+      if (error) {
+        reject(error)
+        console.log(error);
+      }
+      resolve('Merchant deleted with ID: '+id)
+    })
+  })
+}
 
 const updateSelhoz = (idname,id,col,text,schema,table) => {
   console.log('UPDATE "'+schema+'"."'+table+'" SET ('+col+')=('+text+') WHERE '+idname+' = '+id);
@@ -363,10 +397,24 @@ getFKArea = () => {
   })
 }
 
+generateSub = (text) => {
+  var sql="";
+  sql=('INSERT INTO projects.subproject (id_project,name_subproject,date_start,date_plan_finish,date_finish,status,id_crop_cl,id_area,id_season) VALUES ('+text+')');
+   console.log(sql)
+  return new Promise(function(resolve, reject) {
+    pool.query(sql, (error, results) => {
+      if (error) {
+        console.log(error);
+        reject(error)
+      }
+      resolve(`A new has been added added: `)
+    })
+  })
+}
 
 insertcrop = (project,id) => {
   return new Promise(function(resolve, reject) {
-    const sql='INSERT INTO projects.project_crop  VALUES (default,(SELECT id_project FROM projects.project where name_project='+project+' ),'+id+')';
+    const sql='INSERT INTO projects.project_crop  VALUES (default,(SELECT id_project FROM projects.project where id_project='+project+' ),'+id+')';
     console.log(sql);
     pool.query(sql,(error, results) => {
       if (error) {
@@ -380,7 +428,7 @@ insertcrop = (project,id) => {
 
 insertseason = (project,id) => {
   return new Promise(function(resolve, reject) {
-    const sql='INSERT INTO projects.project_season  VALUES (default,'+id+',(SELECT id_project FROM projects.project where name_project='+project+' ))';
+    const sql='INSERT INTO projects.project_season  VALUES (default,'+id+',(SELECT id_project FROM projects.project where id_project='+project+' ))';
     console.log(sql);
     pool.query(sql,(error, results) => {
       if (error) {
@@ -394,9 +442,31 @@ insertseason = (project,id) => {
 
 insertarea = (project,id) => {
   return new Promise(function(resolve, reject) {
-    const sql='INSERT INTO projects.project_devision  VALUES (default,(SELECT id_project FROM projects.project where name_project='+project+' ),'+id+')';
+    const sql='INSERT INTO projects.project_devision  VALUES (default,(SELECT id_project FROM projects.project where id_project='+project+' ),1,'+id+')';
     console.log(sql);
     pool.query(sql,(error, results) => {
+      if (error) {
+        console.log(error);
+        reject(error)
+      }
+      resolve(results.rows);
+    })
+  })
+}
+
+filter = (col,value,schema,table) => {
+  return new Promise(function(resolve, reject) {
+   let arrcol=col.split(',');
+   let valcol=value.split(',');
+   let filter=' WHERE '+arrcol[0]+'='+valcol[0];
+   for (let i=1;i<arrcol.length;i++) 
+   {
+	   filter+=' AND '+arrcol[i]+'='+valcol[i];
+   }
+   console.log(arrcol.length);
+     const sql='SELECT * FROM '+schema+'.'+table+filter;
+	 console.log(sql);
+	  pool.query(sql,(error, results) => {
       if (error) {
         console.log(error);
         reject(error)
@@ -432,5 +502,10 @@ module.exports = {
   insertseason,
   getAllChild,
   getAllstate,
-  createcustomSelhoz
+  createcustomSelhoz,
+  deletecrop,
+  deletearea,
+  deleteseason,
+  generateSub,
+  filter,
 }
