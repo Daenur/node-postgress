@@ -14,7 +14,9 @@ app.use(function (req, res, next) {
   next();
 });
 
-
+app.get('/api',function(req,res) {
+  res.sendFile(__dirname + '\\index.html');
+});
 
 app.get('/', (req, res) => {
     selhoz_model.getall()
@@ -165,6 +167,7 @@ app.get('/state/', (req, res) => {
             res.status(500).send(error);
         })
 })
+
 
 app.get('/atdchild/:id', (req, res) => {
     selhoz_model.getAllChild(req.params.id.substr(1))
@@ -453,3 +456,126 @@ console.log("insertcrop")
             res.status(500).send(error);
         })
 })
+
+app.get('/api/states/', (req, res) => {
+    selhoz_model.getAllstatebyMarkin(req.query)
+        .then(response => {
+            res.send(response);
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).send(error);
+        })
+})
+
+
+app.get('/api/gps/', (req, res) => {
+    selhoz_model.getTargetpoint(req.query)
+        .then(response => {
+            res.send(response);
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).send(error);
+        })
+})
+
+app.get('/api/polygon/', (req, res) => {
+	selhoz_model.getGeo(req.query)
+	.then(response => {
+		console.log(response);
+
+		res.send(response);
+		})
+	.catch(error => {
+		res.status(500).send(error);
+})
+
+
+})
+
+app.get('/api/polygon_lite/', (req, res) => {
+	selhoz_model.getGeolite(req.query)
+	.then(response => {
+		console.log(response);
+
+		res.send(response);
+		})
+	.catch(error => {
+		res.status(500).send(error);
+})
+
+
+})
+
+app.get('/api/polygon_geojson/', (req, res) => {
+	selhoz_model.getGeojson(req.query)
+	.then(response => {
+
+		res.send(response);
+		})
+	.catch(error => {
+		res.status(500).send(error);
+})
+
+
+})
+
+app.get('/api/polycenter/', (req, res) => {
+	selhoz_model.getCentroid(req.query)
+	.then(response => {
+
+		res.send(response);
+		})
+	.catch(error => {
+		res.status(500).send(error);
+})
+})
+app.get('/api/childshapes/', (req, res) => {
+	selhoz_model.getchildShape(req.query)
+	.then(response => {
+
+		res.send(response);
+		})
+	.catch(error => {
+		res.status(500).send(error);
+})
+
+})
+
+app.get('/api/distr/', (req, res) => {
+selhoz_model.getAlldistrbyMarkin(req.query)
+.then(response => {
+console.log(response);
+res.send(response);
+})
+.catch(error => {
+console.log(error);
+res.status(500).send(error);
+})
+})
+
+app.get('/api/projects/', (req, res) => {
+    selhoz_model.getProjectbyMarkin(req.query)
+        .then(response => {
+            console.log(response);
+            res.send(response);
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).send(error);
+        })
+})
+
+app.get('/api/subprojects/', (req, res) => {
+    selhoz_model.getSubprojectbyMarkin(req.query)
+        .then(response => {
+            console.log(response);
+            res.send(response);
+        })
+        .catch(error => {
+            console.log(error);
+            res.status(500).send(error);
+        })
+})
+
