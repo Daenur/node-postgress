@@ -7,7 +7,14 @@ const pool = new Pool({
   "port": 5432,
   "dialect": "postgres"
 });
-
+const poolgis=new Pool({
+"user":"nsi",
+"host":"45.89.26.151",
+"database":"postgis_db",
+"password":"endless",
+"port":5432,
+"dialect":"postgres"
+});
 const poolmy = new Pool({
   "user": "postgres",
   "host": "172.16.1.13",
@@ -290,9 +297,12 @@ return new Promise(function(resolve, reject) {
 }
 
 const updateSelhoz = (idname,id,col,text,schema,table) => {
-  console.log('UPDATE "'+schema+'"."'+table+'" SET ('+col+')=('+text+') WHERE '+idname+' = '+id);
+ let sql;
+if (col.split(',').length>1) sql=('UPDATE "'+schema+'"."'+table+'" SET ('+col+')=('+text+') WHERE '+idname+' = '+id);
+else sql=('UPDATE "'+schema+'"."'+table+'" SET '+col+'='+text+' WHERE '+idname+' = '+id);
+console.log(sql);
   return new Promise(function(resolve, reject) {
-    pool.query('UPDATE "'+schema+'"."'+table+'" SET ('+col+')=('+text+') WHERE '+idname+' = '+id, (error, results) => {
+    pool.query(sql, (error, results) => {
       if (error) {
         reject(error)
       }
@@ -476,6 +486,296 @@ filter = (col,value,schema,table) => {
   })
 }
 
+getGeo=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+sql="SELECT info_area_devision.name_full,type_devision.name_devis, ST_AsText(polygon_full) as rgeom FROM atd.shape,atd.info_area_devision,atd.type_devision where shape.id_area=info_area_devision.id_area AND type_devision.id_type_devis=info_area_devision.id_type_devis AND info_area_devision.code_devision="
+let buf='';
+		if (ref["ids"]) { buf="'"+ref["ids"]+"'"+" AND info_area_devision.id_type_devis=1";}
+		if (ref["idd"]) { buf="'"+ref["idd"]+"'"+" AND info_area_devision.id_type_devis=2";}
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+console.log(sql);
+let buf=new Object(results.rows[0]);
+let sum=new Object();
+	sum["type"]=buf["name_devis"];
+	sum["name"]=buf["name_full"];
+	
+	sum["polygon"]=buf["rgeom"].replace('MULTIPOLYGON','');
+	sum["polygon"]=sum["polygon"].replace(/\(|\)/g, '')
+	sum["polygon"]=sum["polygon"].replace(/,/g,';');
+	sum["polygon"]=sum["polygon"].replace(/ /g,',');
+	let sum2=sum["polygon"].split(";");
+	let sum3='';
+
+for (let i=0;i<sum2.length;i++)
+{
+	let co=sum2[i].split(",");
+	sum3=sum3+'{"lat":"'+co[1]+'","lon":"'+co[0]+'"},'
+}
+sum3=sum3.substr(0,sum3.length-1);
+sum3="["+sum3+"]";
+sum3=JSON.parse(sum3);
+sum["polygon"]=sum3;
+	
+      resolve(sum);
+})
+})
+}
+
+
+getGeolite=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+sql="SELECT info_area_devision.name_full,type_devision.name_devis, ST_AsText(polygon_full) as rgeom,ST_NPoints(polygon_full) as num FROM atd.shape,atd.info_area_devision,atd.type_devision where shape.id_area=info_area_devision.id_area AND type_devision.id_type_devis=info_area_devision.id_type_devis AND info_area_devision.code_devision="
+let buf='';
+let maxpoint=''
+		if (ref["ids"]) { buf="'"+ref["ids"]+"'"+" AND info_area_devision.id_type_devis=1";}
+		if (ref["idd"]) { buf="'"+ref["idd"]+"'"+" AND info_area_devision.id_type_devis=2";}
+		if (ref["maxpoint"]) { maxpoint=Number(ref["maxpoint"])}
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+let buf=new Object(results.rows[0]);
+let sum=new Object();
+	sum["type"]=buf["name_devis"];
+	sum["name"]=buf["name_full"];
+	
+	sum["polygon"]=buf["rgeom"].replace('MULTIPOLYGON','');
+	sum["polygon"]=sum["polygon"].replace(/\(|\)/g, '')
+	sum["polygon"]=sum["polygon"].replace(/,/g,';');
+	sum["polygon"]=sum["polygon"].replace(/ /g,',');
+	let sum2=sum["polygon"].split(";");
+	let sum3='';
+if (maxpoint<300) maxpoint=300;
+if (maxpoint>Number(buf["num"])) maxpoint=Number(buf["num"]);
+let step=Math.floor(Number(buf["num"])/maxpoint);
+console.log(step);
+for (let i=0;i<sum2.length;i=i+step)
+{
+	let co=sum2[i].split(",");
+	sum3=sum3+'{"lat":"'+co[1]+'","lon":"'+co[0]+'"},'
+}
+sum3=sum3.substr(0,sum3.length-1);
+sum3="["+sum3+"]";
+sum3=JSON.parse(sum3);
+sum["polygon"]=sum3;
+	
+      resolve(sum);
+})
+})
+}
+
+getGeojson=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+sql="SELECT info_area_devision.name_full,type_devision.name_devis, ST_asGeoJSON(polygon_full) as rgeom FROM atd.shape,atd.info_area_devision,atd.type_devision where shape.id_area=info_area_devision.id_area AND type_devision.id_type_devis=info_area_devision.id_type_devis AND info_area_devision.code_devision="
+let buf='';
+		if (ref["ids"]) { buf="'"+ref["ids"]+"'"+" AND info_area_devision.id_type_devis=1";}
+		if (ref["idd"]) { buf="'"+ref["idd"]+"'"+" AND info_area_devision.id_type_devis=2";}
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+console.log(sql);
+let buf=new Object(results.rows[0]);
+let sum=new Object();
+	sum["type"]='FeatureCollection';
+	sum["features"]=JSON.parse(buf["rgeom"]);
+	console.log(sum["features"]["coordinates"][0]);
+
+	
+      resolve(sum);
+})
+})
+}
+
+
+getCentroid=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+sql="SELECT info_area_devision.name_full,type_devision.name_devis, ST_AsText(ST_Centroid(polygon_full)) as rgeom FROM atd.shape,atd.info_area_devision,atd.type_devision where shape.id_area=info_area_devision.id_area AND type_devision.id_type_devis=info_area_devision.id_type_devis AND info_area_devision.code_devision="
+let buf='';
+		if (ref["ids"]) { buf="'"+ref["ids"]+"'"+" AND info_area_devision.id_type_devis=1";}
+		if (ref["idd"]) { buf="'"+ref["idd"]+"'"+" AND info_area_devision.id_type_devis=2";}
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+console.log(sql);
+let buf=new Object(results.rows[0]);
+let sum=new Object();
+	sum["type"]=buf["name_devis"];
+	sum["name"]=buf["name_full"];
+		buf["rgeom"]=buf["rgeom"].replace('POINT','');
+	buf["rgeom"]=buf["rgeom"].slice(1,-1);
+	
+
+	buf["rgeom"]='{"lat":"'+buf["rgeom"].split(" ")[1]+'","lon":"'+buf["rgeom"].split(" ")[0]+'"}';
+	buf["rgeom"]=JSON.parse(buf["rgeom"]);
+	sum["point"]=buf["rgeom"];
+      resolve(sum);
+})
+})
+}
+
+getAllstatebyMarkin = (ref) => {
+  return new Promise(function(resolve, reject) {
+let sql;
+  sql='SELECT code_devision as "stateCode",name_full as "state" FROM atd.info_area_devision where id_type_devis=1 ';
+  if (ref["ids"])  {sql='SELECT code_devision as "stateCode",name_full as "state" FROM atd.info_area_devision where id_type_devis=1 AND code_devision='+"'"+ref["ids"]+"'";} 
+else {
+ if (ref["name"])   {sql='SELECT code_devision as "stateCode",name_full as "state" FROM atd.info_area_devision where id_type_devis=1 AND name_full='+"'"+ref["name"]+"'";} 
+else {sql='SELECT code_devision as "stateCode",name_full as "state" FROM atd.info_area_devision where id_type_devis=1 ';}}
+
+    pool.query(sql,(error, results) => {
+      if (error) {
+        reject(error)
+      }
+	let sum=new Object();
+	sum["states"]=results.rows;
+      resolve(sum);
+    })
+  })
+}
+
+getAlldistrbyMarkin = (ref) => {
+  return new Promise(function(resolve, reject) {
+    let sql;
+  sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area ORDER BY a1.name_full,info_area_devision.name_full ASC';
+  if (ref["sname"]) { sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area AND a1.name_full='+"'"+ref["sname"]+"'"+' ORDER BY a1.name_full,info_area_devision.name_full ASC'; } else {
+	if (ref["ids"]) { sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area AND a1.code_devision='+"'"+ref["ids"]+"'"+'  ORDER BY a1.name_full,info_area_devision.name_full ASC'; } else {
+		if (ref["idd"]) { sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area AND info_area_devision.code_devision='+"'"+ref["idd"]+"'"+'  ORDER BY a1.name_full,info_area_devision.name_full ASC'; } else {
+					if (ref["mrd"]) { sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area AND shape.mrd_code='+"'"+ref["mrd"]+"'"+'  ORDER BY a1.name_full,info_area_devision.name_full ASC'; } else {
+								if (ref["name"]) { sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area AND info_area_devision.name_full='+"'"+ref["name"]+"'"+' ORDER BY a1.name_full,info_area_devision.name_full ASC'; } else {
+											sql='SELECT a1.code_devision as "stateCode",a1.name_full as state,info_area_devision.code_devision as "districtCode",info_area_devision.name_full as "district",info_area_devision.name_shot as "districtAltNames",shape.mrd_code as "mrdcode" FROM atd.info_area_devision,atd.shape,atd.link_up_down LEFT JOIN atd.info_area_devision as a1 ON (a1.id_area = link_up_down.id_parent_area) where info_area_devision.id_type_devis=2 AND info_area_devision.id_area=shape.id_area AND info_area_devision.id_area=link_up_down.id_area ORDER BY a1.name_full,info_area_devision.name_full ASC';
+											}
+								}
+					} 
+				}
+			}
+    console.log(sql);
+    pool.query(sql,(error, results) => {
+      if (error) {
+        reject(error)
+      }
+      let sum=new Object();
+	sum["districts"]=results.rows;
+      resolve(sum);
+
+    })
+  })
+}
+
+
+getTargetpoint = (ref) => {
+  return new Promise(function(resolve, reject) {
+let sql,lat,lon;
+  sql='';
+  if (ref["lat"])  {lat=ref["lat"]} 
+
+ if (ref["lon"])   {lon=ref["lon"]} 
+sql="SELECT country.name_full,info_area_devision.id_country,type_devision.name_devis,info_area_devision.name_full,info_area_devision.code_devision,st_contains(shape.polygon_full, ST_GeomFromText('POINT("+lon+" "+lat+")', 4326)) FROM atd.shape,atd.info_area_devision,atd.type_devision,atd.country where st_contains(shape.polygon_full, ST_GeomFromText('POINT("+lon+" "+lat+")', 4326)) AND shape.id_area=info_area_devision.id_area AND type_devision.id_type_devis=info_area_devision.id_type_devis AND info_area_devision.id_country=country.id_country"
+
+    pool.query(sql,(error, results) => {
+      if (error) {
+        reject(error)
+      }
+	  let sum=new Object();
+	  sum["country"]='';
+	  sum["countryCode"]='';
+	  sum["state"]='';
+	  sum["stateCode"]='';
+	  sum["district"]='';
+	  sum["districtCode"]='';
+	  sum["tehsilCode"]='';
+	  sum["tehsil"]='';
+	  sum["blockCode"]='';
+	  sum["block"]='';
+	  sum["gpCode"]='';
+	  sum["gp"]='';
+	  sum["villageCode"]='';
+	  sum["village"]='';
+	  for (let i=0;i<results.rows.length;i++)
+	  {
+		  let buf=new Object(results.rows[i]);
+	  if (buf["name_devis"]=='District') {
+		   sum["district"]=buf["name_full"];
+	  sum["districtCode"]=buf["code_devision"];
+	  }
+	  	  if (buf["name_devis"]=='State') {
+		   sum["state"]=buf["name_full"];
+	  sum["stateCode"]=buf["code_devision"];
+	  	   sum["country"]='India';
+	  sum["countryCode"]=buf["id_country"];
+	  }
+	  console.log(sum);
+	  }
+	
+	
+      resolve(sum);
+    })
+  })
+}
+
+getProjectbyMarkin = (ref) => {
+  return new Promise(function(resolve, reject) {
+    const sql="SELECT * FROM projects.project INNER JOIN (SELECT STRING_AGG(crop.crop_classification.name ,',') as Crops, project_crop.id_project FROM projects.project_crop INNER JOIN crop.crop_classification ON project_crop.id_crop=crop.crop_classification.id_crop_cl GROUP BY project_crop.id_project) AS crop USING (id_project) INNER JOIN (SELECT STRING_AGG(atd.info_area_devision.name_full,',') as Devisions, project_devision.id_project FROM projects.project_devision INNER JOIN atd.info_area_devision ON project_devision.id_area=atd.info_area_devision.id_area GROUP BY project_devision.id_project) AS div USING (id_project) INNER JOIN (SELECT STRING_AGG(other.season.season_name,',') as Seasons, project_season.id_project FROM projects.project_season INNER JOIN other.season ON project_season .id_season=other.season.id_season GROUP BY project_season.id_project) AS season USING (id_project)";
+	let buf='';
+		if (ref["idp"]) { buf=' WHERE  project.id_project='+"'"+ref["idp"]+"'";}
+		if (ref["namep"]) {buf=' WHERE  project.name_project='+"'"+ref["namep"]+"'";}
+    pool.query(sql+buf,(error, results) => {
+      if (error) {
+        reject(error)
+      }
+	  let sum=new Object();
+      	sum["projects"]=results.rows;
+      resolve(sum);
+    })
+  })
+}
+
+
+getSubprojectbyMarkin = (ref) => {
+  return new Promise(function(resolve, reject) {
+    const sql="SELECT id_subproject,id_project,name_subproject,date_start,date_plan_finish,date_finish,status,crop,season,area FROM projects.subproject INNER JOIN (SELECT crop.crop_classification.name as crop, crop.crop_classification.id_crop_cl FROM crop.crop_classification) as ewe USING (id_crop_cl) INNER JOIN (SELECT other.season.season_name as season, other.season.id_season FROM other.season) as ewe3 USING (id_season) INNER JOIN (SELECT atd.info_area_devision.name_full as area, atd.info_area_devision.id_area FROM atd.info_area_devision ) AS div USING (id_area)"
+	let buf='';
+		if (ref["idp"]) { buf=' WHERE  subproject.id_project='+"'"+ref["idp"]+"'";}
+		if (ref["idsp"]) { buf=' WHERE  subproject.id_subproject='+"'"+ref["idsp"]+"'";}
+		if (ref["namesp"]) {buf=' WHERE  subproject.name_subproject='+"'"+ref["namesp"]+"'";}
+    pool.query(sql+buf,(error, results) => {
+      if (error) {
+        reject(error)
+      }
+	  let sum=new Object();
+      	sum["subprojects"]=results.rows;
+      resolve(sum);
+    })
+  })
+}
+
+
+getchildShape=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+
+let buf='';
+		if (ref["ids"]) { sql='SELECT info_area_devision.id_area,info_area_devision.name_full,ST_AsText(shape.polygon_full) as geom FROM atd.info_area_devision,atd.shape inner join (SELECT * FROM atd.link_up_down where id_parent_area='+ref["ids"]+') as total USING(id_area) where shape.id_area=info_area_devision.id_area'}
+		if (ref["names"]) { sql='';}
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+ let sum=new Object();
+	sum["childshapes"]=results.rows;
+      resolve(sum);
+})
+})
+}
+
 module.exports = {
   getSelhoz,
   getFKSelhoz,
@@ -508,4 +808,15 @@ module.exports = {
   deleteseason,
   generateSub,
   filter,
+getAlldistrbyMarkin,
+getAllstatebyMarkin,
+getGeo,
+getGeolite,
+getTargetpoint,
+getProjectbyMarkin,
+getSubprojectbyMarkin,
+getGeojson,
+getCentroid,
+getchildShape,
 }
+
