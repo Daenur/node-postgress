@@ -95,12 +95,13 @@ getProject = (project) => {
 getsubProject = (project) => {
   console.log(project+"  subs")
   return new Promise(function(resolve, reject) {
-    const sql='SELECT id_subproject,id_project,name_subproject,date_start,date_plan_finish,date_finish,status,id_area,crop,season\n' +
+    const sql='SELECT id_subproject,id_project,name_subproject,date_start,date_plan_finish,date_finish,status,area,crop,season\n' +
         'FROM "projects".subproject\n' +
         'INNER JOIN (SELECT "crop".crop_classification.name as crop, "crop".crop_classification.id_crop_cl \n' +
         '\t\t\tFROM "crop".crop_classification) as ewe USING (id_crop_cl)\n' +
         '\n' +
-
+'INNER JOIN (SELECT atd.info_area_devision.name_full as area, atd.info_area_devision.id_area \n' +
+        +'\t\t\tFROM atd.info_area_devision) as ewe2 USING (id_area)'+
         'INNER JOIN (SELECT other.season.season_name as season, other.season.id_season \n' +
         '\t\t\tFROM other.season) as ewe3 USING (id_season) WHERE subproject.id_project='+project;
     pool.query(sql,(error, results) => {
@@ -776,6 +777,59 @@ reject(error)
 })
 }
 
+getLvlcount=(ref)=>{
+return new Promise(function(resolve,reject) {
+let sql;
+
+let buf='';
+if ((ref["id"]) && (ref["lvl"])) sql='WITH RECURSIVE r AS (select link_up_down.id_area,link_up_down.id_parent_area,'+ref["lvl"]+' as sum,link_up_down.id_type_link from atd.link_up_down where link_up_down.id_parent_area='+ref["id"]+' UNION select link_up_down.id_area,link_up_down.id_parent_area,r.sum+1,link_up_down.id_type_link from atd.link_up_down JOIN r ON link_up_down.id_parent_area = r.id_area ) SELECT count(*),r.id_type_link FROM r GROUP BY r.id_type_link order by r.id_type_link' 
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+let sum=new Object();
+sum["id"]=ref["id"];
+for (let i=0;i<results.rows.length;i++)
+{
+if (new Object(results.rows[i])["id_type_link"]==1) sum["Districts"]=new Object(results.rows[i])["count"];
+if (new Object(results.rows[i])["id_type_link"]==2) sum["CD Blocks"]=new Object(results.rows[i])["count"];
+if (new Object(results.rows[i])["id_type_link"]==3) sum["Gram Panchayats"]=new Object(results.rows[i])["count"];
+if (new Object(results.rows[i])["id_type_link"]==4) sum["Villages"]=new Object(results.rows[i])["count"];
+
+
+}
+resolve(sum);
+})
+})
+}
+
+getIndiacount=()=>{
+return new Promise(function(resolve,reject) {
+let sql;
+
+let buf='';
+sql='select count(*),id_type_devis from atd.info_area_devision Group by info_area_devision.id_type_devis order by id_type_devis'
+pool.query(sql+buf,(error, results) => {
+if (error) {
+reject(error)
+}
+let sum=new Object();
+for (let i=0;i<results.rows.length;i++)
+{
+	if (i==0) sum["States"]=new Object(results.rows[i])["count"];
+if (i==1) sum["Districts"]=new Object(results.rows[i])["count"];
+if (i==2) sum["CD Blocks"]=new Object(results.rows[i])["count"];
+if (i==3) sum["Gram Panchayats"]=new Object(results.rows[i])["count"];
+if (i==4) sum["Villages"]=new Object(results.rows[i])["count"];
+
+
+}
+resolve(sum);
+})
+})
+}
+
+
 module.exports = {
   getSelhoz,
   getFKSelhoz,
@@ -818,5 +872,7 @@ getSubprojectbyMarkin,
 getGeojson,
 getCentroid,
 getchildShape,
+getLvlcount,
+getIndiacount
 }
 
