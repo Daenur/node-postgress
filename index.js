@@ -579,3 +579,26 @@ app.get('/api/subprojects/', (req, res) => {
         })
 })
 
+app.get('/api/lvlcount/', (req, res) => {
+selhoz_model.getLvlcount(req.query)
+.then(response => {
+console.log(response);
+res.send(response);
+})
+.catch(error => {
+console.log(error);
+res.status(500).send(error);
+})
+})
+
+app.get('/api/indiacount/', (req, res) => {
+selhoz_model.getIndiacount()
+.then(response => {
+console.log(response);
+res.send(response);
+})
+.catch(error => {
+console.log(error);
+res.status(500).send(error);
+})
+})
